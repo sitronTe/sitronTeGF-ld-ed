@@ -1,0 +1,29 @@
+/*
+This file should be altered to fit your needs.
+*/
+/* Entire game area */
+#sitronTeGF-content {
+	background-color:#aaa;
+	width:800px;
+	height:640px;
+}
+/* Three lines */
+#sitronTeGF-header {
+	height:20%;
+}
+#sitronTeGF-body {
+	height:60%;
+}
+#sitronTeGF-footer {
+	height:20%;
+}
+/* Center line/body elements */
+#sitronTeGF-body-left {
+	width:20%;
+}
+#sitronTeGF-body-center {
+	width:60%;
+}
+#sitronTeGF-body-right {
+	width:20%;
+}
