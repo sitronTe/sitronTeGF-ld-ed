@@ -59,9 +59,9 @@ var sitronTeGF = {
 			loaded : false,
 			domObj : aud
 		};
-		aud.onload = function() {
+		aud.addEventListener("canplaythrough", function() {
 			sitronTeGF.assets[this["data-index"]].loaded=true;
-		};
+		});
 		aud.src = loc;
 		return p;
 	},
@@ -186,6 +186,16 @@ var sitronTeGF = {
 			sitronTeGF.activeWorld.onClick(worldCoord);
 		}
 	},
+	onPress : function(mEvent) {
+		// TODO Make this pass down to world aswell
+		var guiCoord = sitronTeGF.eventToGUI(mEvent);
+		sitronTeGF.activeWorld.onGUIPress(guiCoord);
+	},
+	onRelease : function(mEvent) {
+		// TODO Make this pass down to world aswell
+		var guiCoord = sitronTeGF.eventToGUI(mEvent);
+		sitronTeGF.activeWorld.onGUIRelease(guiCoord);
+	},
 
 	// Lifecycle methods
 	// init is the function that starts it all
@@ -220,6 +230,14 @@ var sitronTeGF = {
 					"click",
 					sitronTeGF.onClick
 				);
+				sitronTeGF.canvas.addEventListener(
+					"mousedown",
+					sitronTeGF.onPress
+				);
+				sitronTeGF.canvas.addEventListener(
+					"mouseup",
+					sitronTeGF.onRelease
+				);
 				sitronTeGF.resume();
 				sitronTeGF.afID = window.requestAnimationFrame(
 					sitronTeGF.firstAnimationFrame
@@ -236,6 +254,14 @@ var sitronTeGF = {
 				sitronTeGF.canvas.removeEventListener(
 					"click",
 					sitronTeGF.onClick
+				);
+				sitronTeGF.canvas.removeEventListener(
+					"mousedown",
+					sitronTeGF.onPress
+				);
+				sitronTeGF.canvas.removeEventListener(
+					"mouseup",
+					sitronTeGF.onRelease
 				);
 				sitronTeGF.canvas = null;
 			}
@@ -280,6 +306,7 @@ var sitronTeGSounds = {
 				sitronTeGSounds.activeSong = -1;
 			}
 		};
+		return p;
 	},
 	loadSFX : function(loc) {
 		var p = sitronTeGSounds.sfx.length;
@@ -288,6 +315,7 @@ var sitronTeGSounds = {
 		sitronTeGF.assets[ap].domObj.onended=function(){
 			this.currentTime=0;
 		};
+		return p;
 	},
 	playMusic : function() {
 		if (sitronTeGSounds.muted) {return;}
@@ -442,12 +470,13 @@ var sitronTeCamBuilder = {
 	updTrans : function() {
 		var cam = this.camera;
 		var canvInf = sitronTeGF.canvasInfo;
-		var scW = canvInf.width * cam.css.width / 2;
-		var scH = canvInf.height * cam.css.height / 2;
+		var scW = canvInf.width * cam.css.width / 4;
+		var scH = canvInf.height * cam.css.height / 4;
 		var scx = canvInf.width / cam.minViewport.width;
 		var scy = canvInf.height / cam.minViewport.height;
 		// scxx and scyy is used to center camera when keeping aspect ratio
-		var scxx = scx, scyy = scy;
+		// TODO this has been bug fix
+		var scxx = scW, scyy = scH;
 		if (cam.minViewport.keepAspect) {
 			if (scx < scy) {
 				scy = scx;
@@ -455,6 +484,7 @@ var sitronTeCamBuilder = {
 				scx = scy;
 			}
 			if (!cam.minViewport.center) {
+				// TODO THIS IS WRONG, but not used yet...
 				scxx = scx;
 				scyy = scy;
 			}
@@ -496,7 +526,7 @@ sitronTeGWorld.prototype = {
 	update : function(dt) {
 		this.updateWorld(dt);
 		for (var i = 0; i < this.gameObjects.length; i++) {
-			this.gameObjects[i].update(dt);
+			if (this.gameObjects[i] !== null) { this.gameObjects[i].update(dt); }
 		}
 		for (var i = 0; i < this.cameras.length; i++) {
 			this.cameras[i].update(dt);
@@ -515,11 +545,13 @@ sitronTeGWorld.prototype = {
 			var cam = this.cameras[c].camera;
 			var trans = cam.rowMajTransform;
 			for (var i = 0; i < this.gameObjects.length; i++) {
-				context.setTransform(
-					trans[0][0], trans[1][0], trans[0][1],
-					trans[1][1], trans[0][2], trans[1][2]
-				);
-				this.gameObjects[i].doDraw(context);
+				if (this.gameObjects[i] !== null) {
+					context.setTransform(
+						trans[0][0], trans[1][0], trans[0][1],
+						trans[1][1], trans[0][2], trans[1][2]
+					);
+					this.gameObjects[i].doDraw(context);
+				}
 			}
 			for (var i = 0; i < this.cameras.length; i++) {
 				context.setTransform(
@@ -539,12 +571,20 @@ sitronTeGWorld.prototype = {
 	},
 	onClick : function(localMouseEvent) {
 		for (var i = 0; i < this.gameObjects.length; i++) {
-			if (this.gameObjects[i].eventInside(localMouseEvent)) {
-				this.gameObjects[i].onClick();
+			if (this.gameObjects[i] !== null) {
+				if (this.gameObjects[i].eventInside(localMouseEvent)) {
+					this.gameObjects[i].onClick();
+				}
 			}
 		}
 	},
 	onGUIClick : function(localMouseEvent) {
+		return false;
+	},
+	onGUIPress : function(localMouseEvent) {
+		return false;
+	},
+	onGUIRelease : function(localMouseEvent) {
 		return false;
 	}
 };
