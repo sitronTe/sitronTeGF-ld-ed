@@ -547,7 +547,7 @@ sitronTeGWorld.prototype = {
 			trans[0][0], trans[1][0], trans[0][1],
 			trans[1][1], trans[0][2], trans[1][2]
 		);
-		this.camera[i].draw(context);
+		this.camera.draw(context);
 	},
 	drawBackground : function(context) {
 		context.fillStyle=this.defaultBackground;
