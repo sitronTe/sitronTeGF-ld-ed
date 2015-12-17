@@ -21,9 +21,11 @@ limitations under the License.
 	text-align : center;
 }
 /* Three main lines, those properties that user should not have to worry about */
-#sitronTeGF-header {
+#sitronTeGF-header, #sitronTeGF-header:focus {
 	width:100%;
 	display:block;
+	border:inherit;
+	background:inherit;
 }
 #sitronTeGF-body {
 	width:100%;

@@ -251,6 +251,7 @@ var sitronTeGF = {
 	// Lifecycle methods
 	// init is the function that starts it all
 	init : function() {
+		alert("hohoho");
 		sitronTeGF.activeWorld = new sitronTeGWorld();
 		var center = document.getElementById("sitronTeGF-body-center");
 		while (center.firstChild) {
@@ -424,7 +425,7 @@ var sitronTeGSounds = {
 
 		contEl.appendChild(sitronTeGHelper.createLabelElement("sitronTeGF-sfx-volume", "SFX volume"));
 		contEl.appendChild(document.createElement("br"));
-		var sVolSlide = sitronTeGHelper.createSlideElement8"sitronTeGF-sfx-volume", sitronTeGSounds.sfxVolume*100, 0, 100);
+		var sVolSlide = sitronTeGHelper.createSlideElement("sitronTeGF-sfx-volume", sitronTeGSounds.sfxVolume*100, 0, 100);
 		sVolSlide.addEventListener("change", function() {
 			sitronTeGSounds.sfxVolume = this.value/100;
 		});
