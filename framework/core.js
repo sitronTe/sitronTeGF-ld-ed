@@ -180,14 +180,18 @@ var sitronTeGF = {
 		}
 	},
 	onPress : function(mEvent) {
-		// TODO Make this pass down to world aswell
 		var guiCoord = sitronTeGF.eventToGUI(mEvent);
-		sitronTeGF.activeWorld.onGUIPress(guiCoord);
+		if (!sitronTeGF.activeWorld.onGUIPress(guiCoord)) {
+			var worldCoord = sitronTeGF.eventToWorld(mEvent);
+			sitronTeGF.activeWorld.onPress(worldCoord);
+		}
 	},
 	onRelease : function(mEvent) {
-		// TODO Make this pass down to world aswell
 		var guiCoord = sitronTeGF.eventToGUI(mEvent);
-		sitronTeGF.activeWorld.onGUIRelease(guiCoord);
+		if (!sitronTeGF.activeWorld.onGUIRelease(guiCoord)) {
+			var worldCoord = sitronTeGF.eventToWorld(mEvent);
+			sitronTeGF.activeWorld.onRelease(worldCoord);
+		}
 	},
 
 	// Lifecycle methods
@@ -418,7 +422,9 @@ sitronTeGObj.prototype = {
 	eventInside : function(positionInput) { return false; },
 
 	// Quite easy to extend if necessary
-	onClick : function(positionInput) { return false; }
+	onClick : function(positionInput) { return false; },
+	onPress : function(positionInput) { return false; },
+	onRelease : function(positionInput) { return false; }
 };
 
 // Used to create camera.
@@ -561,6 +567,24 @@ sitronTeGWorld.prototype = {
 			if (this.gameObjects[i] !== null) {
 				if (this.gameObjects[i].eventInside(localMouseEvent)) {
 					this.gameObjects[i].onClick();
+				}
+			}
+		}
+	},
+	onPress : function(localMouseEvent) {
+		for (var i = 0; i < this.gameObjects.length; i++) {
+			if (this.gameObjects[i] !== null) {
+				if (this.gameObjects[i].eventInside(localMouseEvent)) {
+					this.gameObjects[i].onPress();
+				}
+			}
+		}
+	},
+	onRelease : function(localMouseEvent) {
+		for (var i = 0; i < this.gameObjects.length; i++) {
+			if (this.gameObjects[i] !== null) {
+				if (this.gameObjects[i].eventInside(localMouseEvent)) {
+					this.gameObjects[i].onRelease();
 				}
 			}
 		}
