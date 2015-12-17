@@ -87,22 +87,15 @@ var sitronTeGF = {
 		return {x:lx,y:ly};
 	},
 	eventToWorld : function(mEvent) {
-		if (sitronTeGF.activeWorld.cameras.length > 0) {
-			var cam = sitronTeGF.activeWorld.cameras[0].camera;
-			if (cam.rowMajTransformInv === null) {
-				cam.updateTransformInv();
-			}
-			var coord = sitronTeGF.eventLocalCoord(mEvent);
-			var ti = cam.rowMajTransformInv;
-			return {
-				x : coord.x * ti[0][0] + coord.y * ti[0][1] + ti[0][2],
-				y : coord.x * ti[1][0] + coord.y * ti[1][1] + ti[1][2],
-				source : mEvent
-			};
+		var cam = sitronTeGF.activeWorld.camera.camera;
+		if (cam.rowMajTransformInv === null) {
+			cam.updateTransformInv();
 		}
+		var coord = sitronTeGF.eventLocalCoord(mEvent);
+		var ti = cam.rowMajTransformInv;
 		return {
-			x : 0,
-			y : 0,
+			x : coord.x * ti[0][0] + coord.y * ti[0][1] + ti[0][2],
+			y : coord.x * ti[1][0] + coord.y * ti[1][1] + ti[1][2],
 			source : mEvent
 		};
 	},
@@ -163,7 +156,7 @@ var sitronTeGF = {
 		// Check canvas size and update
 		sitronTeGF.updateSize();
 		if (sitronTeGF.updateCameraTransform) {
-			sitronTeGF.activeWorld.updateCamerasTransform();
+			sitronTeGF.activeWorld.updateCameraTransform();
 			sitronTeGF.updateCameraTransform = false;
 		}
 		// Get info object. Used to get canonical screen space and  gui space
@@ -520,7 +513,7 @@ var sitronTeCamBuilder = {
 function sitronTeGWorld() {
 	this.gameObjects = [];
 	this.defaultBackground = "#000000";
-	this.cameras = [sitronTeCamBuilder.buildCamera()];
+	this.camera = sitronTeCamBuilder.buildCamera();
 };
 sitronTeGWorld.prototype = {
 	update : function(dt) {
@@ -528,39 +521,33 @@ sitronTeGWorld.prototype = {
 		for (var i = 0; i < this.gameObjects.length; i++) {
 			if (this.gameObjects[i] !== null) { this.gameObjects[i].update(dt); }
 		}
-		for (var i = 0; i < this.cameras.length; i++) {
-			this.cameras[i].update(dt);
-		}
+		this.camera.update(dt);
 	},
-	updateCamerasTransform : function(canvasAspect) {
-		for (var i = 0; i < this.cameras.length; i++) {
-			this.cameras[i].camera.updateTransform();
-		}
+	updateCameraTransform : function(canvasAspect) {
+		this.camera.camera.updateTransform();
 	},
 	updateWorld : function(dt) {
 		// Override to have a global update function
 	},
 	draw : function(context) {
-		for (var c=0; c < this.cameras.length; c++) {
-			var cam = this.cameras[c].camera;
-			var trans = cam.rowMajTransform;
-			for (var i = 0; i < this.gameObjects.length; i++) {
-				if (this.gameObjects[i] !== null) {
-					context.setTransform(
-						trans[0][0], trans[1][0], trans[0][1],
-						trans[1][1], trans[0][2], trans[1][2]
-					);
-					this.gameObjects[i].doDraw(context);
-				}
-			}
-			for (var i = 0; i < this.cameras.length; i++) {
+		// This should ensure that most times the camera transform is correct (unless there is no canvas)
+		this.updateCameraTransform();
+		var cam = this.camera.camera;
+		var trans = cam.rowMajTransform;
+		for (var i = 0; i < this.gameObjects.length; i++) {
+			if (this.gameObjects[i] !== null) {
 				context.setTransform(
 					trans[0][0], trans[1][0], trans[0][1],
 					trans[1][1], trans[0][2], trans[1][2]
 				);
-				this.cameras[i].draw(context);
+				this.gameObjects[i].doDraw(context);
 			}
 		}
+		context.setTransform(
+			trans[0][0], trans[1][0], trans[0][1],
+			trans[1][1], trans[0][2], trans[1][2]
+		);
+		this.camera[i].draw(context);
 	},
 	drawBackground : function(context) {
 		context.fillStyle=this.defaultBackground;
