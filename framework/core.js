@@ -251,7 +251,6 @@ var sitronTeGF = {
 	// Lifecycle methods
 	// init is the function that starts it all
 	init : function() {
-		alert("hohoho");
 		sitronTeGF.activeWorld = new sitronTeGWorld();
 		var center = document.getElementById("sitronTeGF-body-center");
 		while (center.firstChild) {
@@ -464,53 +463,6 @@ sitronTeGHelper.addObservableProperty(sitronTeGSounds, "musicVolume", 0.8);
 sitronTeGSounds.addObserver(sitronTeGSounds.musicVolChanged, "musicVolume");
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "sfxVolume", 1);
 sitronTeGSounds.addObserver(sitronTeGSounds.sfxVolChanged, "sfxVolume");
-
-var sitronTeSpriteBuilder = {
-	sprite : function () {
-		this.currentImage = -1;
-		this.images = [];
-		this.spriteInfos = [];
-	},
-	draw : function(ctx) {
-		if (this.sprite.currentImage >= 0) {
-			var img = this.sprite.images[this.sprite.currentImage];
-			var info = this.sprite.spriteInfos[this.sprite.currentImage];
-			ctx.drawImage(img, info.src.x, info.src.y, info.src.w, info.src.h, info.dest.x, info.dest.y, info.dest.w, info.dest.h);
-		}
-	},
-	buildEmptySprite : function() {
-		var spr = new sitronTeGObj();
-		spr.transform.scale.y = -1;
-		spr.sprite = new sitronTeSpriteBuilder.sprite();
-		spr.draw = sitronTeSpriteBuilder.draw;
-		return spr;
-	},
-	buildSimpleSprite : function(loc, offsetX, offsetY, width, height) {
-		var spr = sitronTeSpriteBuilder.buildEmptySprite();
-		var index = sitronTeGF.loadImage(loc);
-		spr.sprite.images[0] = sitronTeGF.assets[index].domObj;
-		spr.sprite.spriteInfos[0] = {
-			src : { x:0, y:0, w:width, h:height },
-			dest : { x:offsetX, y:offsetY, w:width, h:height }
-		};
-		spr.sprite.currentImage = 0;
-		return spr;
-	},
-	buildRegularSingleImgSprite : function(loc, offsetX, offsetY, width, height, count) {
-		var spr = sitronTeSpriteBuilder.buildEmptySprite();
-		var index = sitronTeGF.loadImage(loc);
-		var img = sitronTeGF.assets[index].domObj;
-		for (var i=0; i < count; i++) {
-			spr.sprite.images[i] = img;
-			spr.sprite.spriteInfos[i] = {
-				src : { x:i*width, y:0, w:width, h:height },
-				dest : { x:offsetX, y:offsetY, w:width, h:height }
-			};
-		}
-		spr.sprite.currentImage = 0;
-		return spr;
-	}
-};
 
 // minimal game object constructor
 function sitronTeGObj() {
@@ -727,17 +679,6 @@ var sitronTeGLoading = {
 	},
 	initLoad : function() {
 		var lw = new sitronTeGWorld();
-		var spr = sitronTeSpriteBuilder.buildEmptySprite();
-		spr.sprite.images[0] = document.getElementById("sitronTeGF-logo");
-		spr.sprite.spriteInfos[0] = {
-			src : { x:0, y:0, w:300, h:50 },
-			dest : { x:-0.3, y:-0.05, w:0.6, h:0.1 }
-		};
-		spr.update = function(dt) {
-			this.transform.rotation += dt;
-		};
-		spr.sprite.currentImage = 0;
-		lw.gameObjects[0] = spr;
 		lw.updateWorld = sitronTeGLoading.update;
 		lw.drawGUI = sitronTeGLoading.drawFG;
 		sitronTeGLoading.loadWorld = lw;
