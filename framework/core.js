@@ -15,6 +15,43 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 */
+var sitronTeGHelper = {
+	// TODO Test if we have scoping correct (propName + valName)
+	addObservableProperty : function(obj, propName, defaultValue) {
+		var valName = propName+"_value";
+		obj[valName] = defaultValue;
+		obj[propName+"_observers"] = [];
+		obj.addObserver = sitronTeGHelper.addObserver;
+		obj.alertObservers = sitronTeGHelper.alertObservers;
+		Object.defineProperty(
+			obj, propName,
+			{
+				get : function() {
+					return this[valName];
+				},
+				set : function(val) {
+					var old = this[valName];
+					this[valName] = val;
+					if (val !== old) { this.alertObservers(old, val, propName); }
+				}
+			}
+		);
+	},
+	addObserver : function (obs, propName) {
+		var obss = this[propName+"_observers"];
+		if (obss !== null) {
+			obss[obss.length] = obs;
+		}
+	},
+	alertObservers : function(oldVal, newVal, propName) {
+		var obss = this[propName+"_observers"];
+		if (obss !== null) {
+			for (var i = 0; i < obss.length; i++) {
+				obss[i](oldVal, newVal, propName);
+			}
+		}
+	}
+}
 
 // The main framework code
 var sitronTeGF = {
@@ -285,8 +322,6 @@ var sitronTeGSounds = {
 	randomizeMusic : true,
 	keepPlayingMusic : true,
 	activeSong : -1,
-	musicVolume : 0.8,
-	sfxVolume : 1,
 	loadMusic : function(loc) {
 		var p = sitronTeGSounds.music.length;
 		var ap = sitronTeGF.loadSound(loc);
@@ -344,8 +379,22 @@ var sitronTeGSounds = {
 		aud.currentTime=0;
 		aud.volume=sitronTeGSounds.sfxVolume;
 		aud.play();
+	},
+	musicVolChanged : function(ov, nv, pname) {
+		for (var i = 0; i < sitronTeGSounds.music.length; i++) {
+			sitronTeGF.assets[sitronTeGSounds.music[i]].domObj.volume=nv;
+		}
+	},
+	sfxVolChanged : function(ov, nv, pname) {
+		for (var i = 0; i < sitronTeGSounds.sfx.length; i++) {
+			sitronTeGF.assets[sitronTeGSounds.sfx[i]].domObj.volume=nv;
+		}
 	}
 };
+sitronTeGHelper.addObservableProperty(sitronTeGSounds, "musicVolume", 0.8);
+sitronTeGSounds.addObserver(sitronTeGSounds.musicVolChanged, "musicVolume");
+sitronTeGHelper.addObservableProperty(sitronTeGSounds, "sfxVolume", 1);
+sitronTeGSounds.addObserver(sitronTeGSounds.sfxVolChanged, "sfxVolume");
 
 var sitronTeSpriteBuilder = {
 	sprite : function () {
