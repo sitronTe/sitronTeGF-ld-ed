@@ -37,12 +37,14 @@ var sitronTeGHelper = {
 			}
 		);
 	},
+	// Should NOT be called directely from this, but rather on the object which has the observable property
 	addObserver : function (obs, propName) {
 		var obss = this[propName+"_observers"];
 		if (obss !== null) {
 			obss[obss.length] = obs;
 		}
 	},
+	// Should NOT be called directely
 	alertObservers : function(oldVal, newVal, propName) {
 		var obss = this[propName+"_observers"];
 		if (obss !== null) {
@@ -50,6 +52,21 @@ var sitronTeGHelper = {
 				obss[i](oldVal, newVal, propName);
 			}
 		}
+	},
+	createLabelElement : function(forId, label) {
+		var lblEl = document.createElement("label");
+		lblEl.setAttribute("for", forId);
+		lblEl.appendChild(document.createTextNode(label));
+		return lblEl;
+	},
+	createSlideElement : function(id, defaultValue, min, max) {
+		var slideEl = document.createElement("input");
+		slideEl.id = id;
+		slideEl.type = "range";
+		slideEl.min = min;
+		slideEl.max = max;
+		slideEl.value = defaultValue;
+		return slideEl;
 	}
 }
 
@@ -318,7 +335,6 @@ var sitronTeGF = {
 var sitronTeGSounds = {
 	music : [],
 	sfx : [],
-	muted : false,
 	randomizeMusic : true,
 	keepPlayingMusic : true,
 	activeSong : -1,
@@ -389,8 +405,60 @@ var sitronTeGSounds = {
 		for (var i = 0; i < sitronTeGSounds.sfx.length; i++) {
 			sitronTeGF.assets[sitronTeGSounds.sfx[i]].domObj.volume=nv;
 		}
+	},
+	createVolumeControls : function() {
+		var contEl = document.createElement("div");
+		contEl.className = "sitronTeGF-volume-control";
+		contEl.appendChild(sitronTeGHelper.createLabelElement("sitronTeGF-music-volume", "Music volume"));
+		contEl.appendChild(document.createElement("br"));
+		var mVolSlide = sitronTeGHelper.createSlideElement("sitronTeGF-music-volume", sitronTeGSounds.musicVolume*100, 0, 100);
+		mVolSlide.addEventListener("change", function() {
+			sitronTeGSounds.musicVolume = this.value/100;
+		});
+		sitronTeGSounds.addObserver("musicVolume", function(ov, nv, pname) {
+			// TODO Ensure that this is in correct scope (closure thingy)
+			mVolSlide.value = nv * 100;
+		});
+		contEl.appendChild(mVolSlide);
+		contEl.appendChild(document.createElement("br"));
+
+		contEl.appendChild(sitronTeGHelper.createLabelElement("sitronTeGF-sfx-volume", "SFX volume"));
+		contEl.appendChild(document.createElement("br"));
+		var sVolSlide = sitronTeGHelper.createSlideElement8"sitronTeGF-sfx-volume", sitronTeGSounds.sfxVolume*100, 0, 100);
+		sVolSlide.addEventListener("change", function() {
+			sitronTeGSounds.sfxVolume = this.value/100;
+		});
+		sitronTeGSounds.addObserver("sfxVolume", function(ov, nv, pname) {
+			// TODO Ensure that this is correct scope (closure thingy)
+			sVolSlide.value = nv * 100;
+		});
+		contEl.appendChild(sVolSlide);
+		contEl.appendChild(document.createElement("br"));
+
+		contEl.appendChild(document.createElement("br"));
+		contEl.appendChild(sitronTeGHelper.createLabelElement("sitronTeGF-volume-muted", "Mute"));
+		var chkBxEl = document.createElement("input");
+		chkBxEl.id = "sitronTeGF-volume-muted";
+		chkBxEl.type = "checkbox";
+		chkBxEl.checked = sitronTeGSounds.muted;
+		chkBxEl.addEventListener("change", function() {
+			sitronTeGSounds.muted = this.checked;
+		});
+		sitronTeGSounds.addObserver("muted", function(ov, nv, pname) {
+			// TODO Ensure that this is correct scope (closure thingy)
+			chkBxEl.checked = nv;
+			if (nv) {
+				// TODO Stop all sounds in a better way than this
+				sitronTeGSounds.musicVolume = 0;
+				sitronTeGSounds.sfxVolume = 0;
+			}
+		});
+		contEl.appendChild(chkBxEl);
+
+		return contEl;
 	}
 };
+sitronTeGHelper.addObservableProperty(sitronTeGSounds, "muted", false);
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "musicVolume", 0.8);
 sitronTeGSounds.addObserver(sitronTeGSounds.musicVolChanged, "musicVolume");
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "sfxVolume", 1);
