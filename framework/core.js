@@ -38,7 +38,7 @@ var sitronTeGHelper = {
 		);
 	},
 	// Should NOT be called directely from this, but rather on the object which has the observable property
-	addObserver : function (obs, propName) {
+	addObserver : function (propName, obs) {
 		var obss = this[propName+"_observers"];
 		if (obss !== null) {
 			obss[obss.length] = obs;
@@ -247,6 +247,19 @@ var sitronTeGF = {
 			sitronTeGF.activeWorld.onRelease(worldCoord);
 		}
 	},
+	onKeyDown : function(kEvent) {
+		if (sitronTeGF.activeWorld !== null) {
+			sitronTeGF.activeWorld.onKeyDown(kEvent);
+		}
+	},
+	onKeyUp : function(kEvent) {
+		if (sitronTeGF.activeWorld !== null) {
+			sitronTeGF.activeWorld.onKeyUp(kEvent);
+		}
+	},
+	focusKeyListener : function() {
+		document.getElementById("sitronTeGF-header").focus();
+	},
 
 	// Lifecycle methods
 	// init is the function that starts it all
@@ -330,6 +343,20 @@ var sitronTeGF = {
 		sitronTeGF.gameState.asleep = false;
 	}
 };
+sitronTeGHelper.addObservableProperty(sitronTeGF, "acceptKeyEvents", false);
+sitronTeGF.addObserver("acceptKeyEvents", function(ov, nv, pname) {
+	var lEl = document.getElementById("sitronTeGF-header");
+	var fEl = document.getElementById("sitronTeGF-content");
+	if (nv) {
+		lEl.addEventListener("keydown", sitronTeGF.onKeyDown);
+		lEl.addEventListener("keyup", sitronTeGF.onKeyUp);
+		fEl.addEventListener("click", sitronTeGF.focusKeyListener);
+	} else {
+		lEl.removeEventListener("keydown", sitronTeGF.onKeyDown);
+		lEl.removeEventListener("keyup", sitronTeGF.onKeyUp);
+		fEl.removeEventListener("click", sitronTeGF.focusKeyListener);
+	}
+});
 
 // SFX and music
 var sitronTeGSounds = {
@@ -460,9 +487,9 @@ var sitronTeGSounds = {
 };
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "muted", false);
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "musicVolume", 0.8);
-sitronTeGSounds.addObserver(sitronTeGSounds.musicVolChanged, "musicVolume");
+sitronTeGSounds.addObserver("musicVolume", sitronTeGSounds.musicVolChanged);
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "sfxVolume", 1);
-sitronTeGSounds.addObserver(sitronTeGSounds.sfxVolChanged, "sfxVolume");
+sitronTeGSounds.addObserver("sfxVolume", sitronTeGSounds.sfxVolChanged);
 
 // minimal game object constructor
 function sitronTeGObj() {
@@ -667,7 +694,9 @@ sitronTeGWorld.prototype = {
 	},
 	onGUIRelease : function(localMouseEvent) {
 		return false;
-	}
+	},
+	onKeyDown : function(kEvent) {},
+	onKeyUp : function(kEvent) {}
 };
 
 var sitronTeGLoading = {
