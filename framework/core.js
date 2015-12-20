@@ -16,8 +16,8 @@ limitations under the License.
 
 */
 
-function sitronTeG2DContextTransform(context, rMajTrans) {
-	this.ctx = context;
+function sitronTeG2DContextTransform() {
+	this.ctx = null;
 	this.lvl = 0;
 	/*
 	Transforms stored in order, fitting of setTransform, [a,b,c,d,e,f] =>
@@ -25,7 +25,7 @@ function sitronTeG2DContextTransform(context, rMajTrans) {
 	| b d f |
 	| 0 0 1 |
 	*/
-	this.trMat = [[ rMajTrans[0][0], rMajTrans[1][0], rMajTrans[0][1], rMajTrans[1][1], rMajTrans[0][2], rMajTrans[1][2] ]];
+	this.trMat = [[ 1, 0, 0, 1, 0, 0 ]];
 }
 sitronTeG2DContextTransform.prototype = {
 	pushTransform : function(trans) {
@@ -65,8 +65,8 @@ sitronTeG2DContextTransform.prototype = {
 	},
 	readyContext : function() {
 		var m = this.trMat[this.lvl];
-		this.context.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
-		return this.context;
+		this.ctx.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+		return this.ctx;
 	},
 	reset : function(context, rMajTrans) {
 		this.ctx = context;
@@ -145,7 +145,6 @@ var sitronTeGF = {
 		asleep : false
 	},
 	skipUpdateLevel : 0.1,
-	updateCameraTransform : true,
 
 	activeWorld : null,
 
@@ -231,7 +230,6 @@ var sitronTeGF = {
 				sitronTeGF.canvasInfo.height = h;
 				sitronTeGF.canvas.width = w;
 				sitronTeGF.canvas.height = h;
-				sitronTeGF.updateCameraTransform = true;
 			}
 		} else {
 			sitronTeGF.canvasInfo.width = 0;
@@ -269,21 +267,14 @@ var sitronTeGF = {
 	doDraw : function() {
 		// Check canvas size and update
 		sitronTeGF.updateSize();
-		if (sitronTeGF.updateCameraTransform) {
-			sitronTeGF.activeWorld.updateCameraTransform();
-			sitronTeGF.updateCameraTransform = false;
-		}
 		// Get info object. Used to get canonical screen space and  gui space
 		var canvInf = sitronTeGF.canvasInfo;
 		// Get context and push css-transform
 		var ctx = sitronTeGF.canvas.getContext("2d");
 		ctx.setTransform(canvInf.width, 0, 0, canvInf.height, 0, 0);
-		ctx.save();
 		sitronTeGF.activeWorld.drawBackground(ctx);
-		ctx.restore();
-		ctx.save();
 		sitronTeGF.activeWorld.draw(ctx);
-		ctx.restore();
+		ctx.setTransform(canvInf.width, 0, 0, canvInf.height, 0, 0);
 		sitronTeGF.activeWorld.drawGUI(ctx);
 	},
 	onClick : function(mEvent) {
@@ -557,7 +548,7 @@ function sitronTeGTransform() {
 		y : 0
 	};
 	this.rotation = 0;
-	this.scale : {
+	this.scale = {
 		x : 1,
 		y : 1
 	};
@@ -568,12 +559,10 @@ function sitronTeGObj() {
 	this.transform = new sitronTeGTransform();
 }
 sitronTeGObj.prototype = {
-	doDraw : function(context) {
-		var trans = this.transform;
-		context.translate(trans.position.x, trans.position.y);
-		context.rotate(trans.rotation);
-		context.scale(trans.scale.x, trans.scale.y);
-		this.draw(context);
+	doDraw : function(contextWrap) {
+		contextWrap.pushTransform(this.transform);
+		this.draw(contextWrap.readyContext());
+		contextWrap.popTransform();
 	},
 	update : function(dt) {},
 	draw : function(context) {},
@@ -676,33 +665,48 @@ var sitronTeCamBuilder = {
 };
 
 function sitronTeGLayer() {
-	// TODO TODO TODO
 	this.transform = new sitronTeGTransform();
 	this.gameObjects = [];
 }
 sitronTeGLayer.prototype = {
-	update : function(dt) {
+	updateGObjs : function(dt) {
 		for (var i = 0; i < this.gameObjects.length; i++) {
 			if (this.gameObjects[i] !== null) { this.gameObjects[i].update(dt); }
 		}
 	},
-	draw : function(context, baseTransform) {
-		// TODO TODO TODO
+	update : function(dt) {
+		// Override to have an update function that runs AFTER camera is updated
+	},
+	doDraw : function(contextWrap) {
+		contextWrap.pushTransform(this.transform);
+		for (var i = 0; i < this.gameObjects.length; i++) {
+			if (this.gameObjects[i] !== null) { this.gameObjects[i].doDraw(contextWrap); }
+		}
+		contextWrap.popTransform();
 	}
 };
 
 function sitronTeGWorld() {
+	this.layers = [];
+	// TODO Decide if direct children of world should be prohibited
 	this.gameObjects = [];
 	this.defaultBackground = "#000000";
 	this.camera = sitronTeCamBuilder.buildCamera();
+	this.ctxWrapper = new sitronTeG2DContextTransform();
 }
 sitronTeGWorld.prototype = {
 	update : function(dt) {
 		this.updateWorld(dt);
+		for (var i = 0; i < this.layers.length; i++) {
+			if (this.layers[i] !== null) { this.layers[i].updateGObjs(dt); }
+		}
 		for (var i = 0; i < this.gameObjects.length; i++) {
 			if (this.gameObjects[i] !== null) { this.gameObjects[i].update(dt); }
 		}
 		this.camera.update(dt);
+		for (var i = 0; i < this.layers.length; i++) {
+			if (this.layers[i] !== null) { this.layers[i].update(dt); }
+		}
 	},
 	updateCameraTransform : function(canvasAspect) {
 		this.camera.camera.updateTransform();
@@ -713,22 +717,15 @@ sitronTeGWorld.prototype = {
 	draw : function(context) {
 		// This should ensure that most times the camera transform is correct (unless there is no canvas)
 		this.updateCameraTransform();
-		var cam = this.camera.camera;
-		var trans = cam.rowMajTransform;
-		for (var i = 0; i < this.gameObjects.length; i++) {
-			if (this.gameObjects[i] !== null) {
-				context.setTransform(
-					trans[0][0], trans[1][0], trans[0][1],
-					trans[1][1], trans[0][2], trans[1][2]
-				);
-				this.gameObjects[i].doDraw(context);
-			}
+		var cWr = this.ctxWrapper;
+		cWr.reset(context, this.camera.camera.rowMajTransform);
+		for (var i = 0; i < this.layers.length; i++) {
+			if (this.layers[i] !== null) { this.layers.doDraw(cWr); }
 		}
-		context.setTransform(
-			trans[0][0], trans[1][0], trans[0][1],
-			trans[1][1], trans[0][2], trans[1][2]
-		);
-		this.camera.draw(context);
+		for (var i = 0; i < this.gameObjects.length; i++) {
+			if (this.gameObjects[i] !== null) { this.gameObjects[i].doDraw(cWr); }
+		}
+		this.camera.doDraw(cWr);
 	},
 	drawBackground : function(context) {
 		context.fillStyle=this.defaultBackground;
