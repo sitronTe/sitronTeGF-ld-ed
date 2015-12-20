@@ -15,6 +15,66 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 */
+
+function sitronTeG2DContextTransform(context, rMajTrans) {
+	this.ctx = context;
+	this.lvl = 0;
+	/*
+	Transforms stored in order, fitting of setTransform, [a,b,c,d,e,f] =>
+	| a c e |
+	| b d f |
+	| 0 0 1 |
+	*/
+	this.trMat = [[ rMajTrans[0][0], rMajTrans[1][0], rMajTrans[0][1], rMajTrans[1][1], rMajTrans[0][2], rMajTrans[1][2] ]];
+}
+sitronTeG2DContextTransform.prototype = {
+	pushTransform : function(trans) {
+		var aMat = this.trMat[this.lvl];
+		this.lvl++;
+		/*
+		Assume composite transform matrix is:
+		| S_x*cos(phi) -S_y*sin(phi) d_x |
+		| S_x*sin(phi)  S_y*cos(phi) d_y |
+		|            0             0   1 |
+		Multiplication:
+		| a11 a21 a31 | | b11 b21 b31 | | a11*b11+a21*b12 a11*b21+a21*b22 a11*b31+a21*b32+a31 |
+		| a12 a22 a32 |*| b12 b22 b32 |=| a12*b11+a22*b12 a12*b21+a22*b22 a12*b31+a22*b32+a32 |
+		|   0   0   1 | |   0   0   1 | |               0               0                   1 |
+		*/
+		var cosPhi = Math.cos(trans.rotation);
+		var sinPhi = Math.sin(trans.rotation);
+		var scX = trans.scale.x;
+		var scY = trans.scale.y;
+		var b11 = scX * cosPhi;
+		var b12 = scX * sinPhi;
+		var b21 = -scY * sinPhi;
+		var b22 = scY * cosPhi;
+		var b31 = trans.position.x;
+		var b32 = trans.position.y;
+		this.trMat[this.lvl] = [
+			aMat[0]*b11 + aMat[2]*b12, // c11
+			aMat[1]*b11 + aMat[3]*b12, // c12
+			aMat[0]*b21 + aMat[2]*b22, // c21
+			aMat[1]*b21 + aMat[3]*b22, // c22
+			aMat[0]*b31 + aMat[2]*b32 + aMat[4], // c31
+			aMat[1]*b31 + aMat[3]*b32 + aMat[5]// c33
+		];
+	},
+	popTransform : function() {
+		if (this.lvl > 0) { this.lvl--; }
+	},
+	readyContext : function() {
+		var m = this.trMat[this.lvl];
+		this.context.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+		return this.context;
+	},
+	reset : function(context, rMajTrans) {
+		this.ctx = context;
+		this.lvl = 0;
+		this.trMat[0] = [ rMajTrans[0][0], rMajTrans[1][0], rMajTrans[0][1], rMajTrans[1][1], rMajTrans[0][2], rMajTrans[1][2] ];
+	}
+};
+
 var sitronTeGHelper = {
 	// TODO Test if we have scoping correct (propName + valName)
 	addObservableProperty : function(obj, propName, defaultValue) {
@@ -491,19 +551,21 @@ sitronTeGSounds.addObserver("musicVolume", sitronTeGSounds.musicVolChanged);
 sitronTeGHelper.addObservableProperty(sitronTeGSounds, "sfxVolume", 1);
 sitronTeGSounds.addObserver("sfxVolume", sitronTeGSounds.sfxVolChanged);
 
+function sitronTeGTransform() {
+	this.position = {
+		x : 0,
+		y : 0
+	};
+	this.rotation = 0;
+	this.scale : {
+		x : 1,
+		y : 1
+	};
+}
+
 // minimal game object constructor
 function sitronTeGObj() {
-	this.transform = {
-		position : {
-			x : 0,
-			y : 0
-		},
-		rotation : 0,
-		scale : {
-			x : 1,
-			y : 1
-		}
-	};
+	this.transform = new sitronTeGTransform();
 }
 sitronTeGObj.prototype = {
 	doDraw : function(context) {
@@ -613,11 +675,27 @@ var sitronTeCamBuilder = {
 	}
 };
 
+function sitronTeGLayer() {
+	// TODO TODO TODO
+	this.transform = new sitronTeGTransform();
+	this.gameObjects = [];
+}
+sitronTeGLayer.prototype = {
+	update : function(dt) {
+		for (var i = 0; i < this.gameObjects.length; i++) {
+			if (this.gameObjects[i] !== null) { this.gameObjects[i].update(dt); }
+		}
+	},
+	draw : function(context, baseTransform) {
+		// TODO TODO TODO
+	}
+};
+
 function sitronTeGWorld() {
 	this.gameObjects = [];
 	this.defaultBackground = "#000000";
 	this.camera = sitronTeCamBuilder.buildCamera();
-};
+}
 sitronTeGWorld.prototype = {
 	update : function(dt) {
 		this.updateWorld(dt);
