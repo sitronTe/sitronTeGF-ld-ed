@@ -148,6 +148,7 @@ var sitronTeGF = {
 
 	activeWorld : null,
 
+	assetTypes : 3, // 1: image, 2: sound, 3: other
 	assets : [],
 
 	loadImage : function(loc) {
@@ -155,6 +156,7 @@ var sitronTeGF = {
 		var img = new Image();
 		img["data-index"] = p;
 		sitronTeGF.assets[p] = {
+			type : 1,
 			loaded : false,
 			domObj : img
 		};
@@ -169,6 +171,7 @@ var sitronTeGF = {
 		var aud = new Audio();
 		aud["data-index"] = p;
 		sitronTeGF.assets[p] = {
+			type : 2,
 			loaded : false,
 			domObj : aud
 		};
@@ -177,6 +180,10 @@ var sitronTeGF = {
 		});
 		aud.src = loc;
 		return p;
+	},
+	loadOther : function(loc) {
+		// TODO
+		throw "not implemented";
 	},
 
 	eventLocalCoord : function(mEvent) {
@@ -779,9 +786,13 @@ var sitronTeGLoading = {
 	minTimeLeft : 3,
 	info : {
 		reportedDone : false,
-		loaded : 0
+		reportedAllButSoundDone : false,
+		loaded : []
 	},
 	initLoad : function() {
+		for (var i = 0; i <= sitronTeGF.assetTypes; i++) {
+			this.info.loaded[i] = 0;
+		}
 		var lw = new sitronTeGWorld();
 		lw.updateWorld = sitronTeGLoading.update;
 		lw.drawGUI = sitronTeGLoading.drawFG;
@@ -797,14 +808,27 @@ var sitronTeGLoading = {
 		if (sitronTeGLoading.minTimeLeft > 0) {
 			sitronTeGLoading.minTimeLeft -= dt;
 		}
-		var count = 0;
+		var count = [];
+		var totLoad = [];
+		for (var i = 0; i <= sitronTeGF.assetTypes; i++) {
+			count[i] = 0;
+			totLoad[i] = 0;
+		}
 		for (var i=0; i < sitronTeGF.assets.length; i++) {
-			if (sitronTeGF.assets[i].loaded) { count++; }
+			totLoad[sitronTeGF.assets[i].type]++;	// Room for optimalisations
+			if (sitronTeGF.assets[i].loaded) {
+				count[0]++;
+				count[sitronTeGF.assets[i].type]++;
+			}
 		}
 		var l = sitronTeGF.assets.length;
-		var loadPart = l !== 0 ? count/sitronTeGF.assets.length : 1;
-		sitronTeGLoading.info.loaded = loadPart;
-		if (sitronTeGF.assets.length === count && sitronTeGLoading.minTimeLeft <= 0) {
+		var loadPart = l !== 0 ? count[0]/sitronTeGF.assets.length : 1;
+		sitronTeGLoading.info.loaded[0] = loadPart;
+		for (var i = 1; i <= sitronTeGF.assetTypes; i++) {
+			sitronTeGLoading.info.loaded[i] = totLoad[i] !== 0 ? count[i]/totLoad[i] : 1;
+		}
+		// TODO when sounds are not loaded, but others are: allow start muted
+		if (sitronTeGF.assets.length === count[0] && sitronTeGLoading.minTimeLeft <= 0) {
 			sitronTeGLoading.info.reportedDone = true;
 			sitronTeGLoading.completed();
 		}
@@ -844,6 +868,9 @@ var sitronTeGLoading = {
 	},
 	drawFG : function(ctx) {
 		ctx.fillStyle = "#666666";
-		ctx.fillRect(sitronTeGLoading.info.loaded-0.05, 0.1, 0.1000, 0.8);
+		for (var i = 0; i < sitronTeGLoading.info.loaded.length; i++) {
+			// TODO Draw descriptive text
+			ctx.fillRect(sitronTeGLoading.info.loaded[i]-0.05, 0.105+i*0.2, 0.1, 0.19);
+		}
 	}
 };
