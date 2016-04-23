@@ -182,8 +182,23 @@ var sitronTeGF = {
 		return p;
 	},
 	loadOther : function(loc) {
-		// TODO
-		throw "not implemented";
+		// TODO Test
+		var p = sitronTeGF.assets.length;
+		var req = new XMLHttpRequest();
+		req["data-index"] = p;
+		sitronTeGF.assets[p] = {
+			type : 3,
+			loaded : false,
+			domObj : req
+		};
+		req.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				sitronTeGF.assets[this["data-index"]].loaded=true;
+			}
+		};
+		req.open("GET", loc, true);
+		req.send();
+		return p;
 	},
 
 	eventLocalCoord : function(mEvent) {
